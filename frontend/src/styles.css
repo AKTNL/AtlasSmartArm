@@ -204,18 +204,27 @@ button:disabled {
 .operation-grid,
 .management-grid,
 .capture-grid {
+  align-items: start;
   display: grid;
   gap: 14px;
   grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
 }
 
 .command-surface,
+.capture-surface {
+  min-height: 380px;
+  padding: 18px;
+}
+
 .inspector,
 .history-panel,
 .events-panel,
-.capture-surface,
 .capture-gallery {
-  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  max-height: min(460px, calc(100vh - 190px));
+  min-height: 0;
+  overflow: hidden;
   padding: 18px;
 }
 
@@ -334,9 +343,17 @@ button:disabled {
 }
 
 .capture-list {
+  background: #f6f8f2;
+  border: 1px solid #e1e8dd;
+  border-radius: 8px;
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: clamp(260px, 50vh, 380px);
+  min-height: 220px;
+  overflow-y: scroll;
+  padding: 10px 6px 10px 10px;
+  scrollbar-gutter: stable;
 }
 
 .capture-item {
@@ -421,9 +438,11 @@ button:disabled {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.78rem;
   gap: 7px;
-  min-height: 210px;
-  overflow: auto;
+  height: clamp(150px, 27vh, 210px);
+  min-height: 0;
+  overflow-y: scroll;
   padding: 12px;
+  scrollbar-gutter: stable;
 }
 
 .log-panel code {
@@ -442,6 +461,48 @@ button:disabled {
   gap: 8px;
 }
 
+.ledger-table,
+.event-list,
+.capture-list,
+.log-panel {
+  scrollbar-color: #98a48f #e1e8dd;
+  scrollbar-width: thin;
+}
+
+.ledger-table::-webkit-scrollbar,
+.event-list::-webkit-scrollbar,
+.capture-list::-webkit-scrollbar,
+.log-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+.ledger-table::-webkit-scrollbar-track,
+.event-list::-webkit-scrollbar-track,
+.capture-list::-webkit-scrollbar-track,
+.log-panel::-webkit-scrollbar-track {
+  background: #e1e8dd;
+  border-radius: 999px;
+}
+
+.ledger-table::-webkit-scrollbar-thumb,
+.event-list::-webkit-scrollbar-thumb,
+.capture-list::-webkit-scrollbar-thumb,
+.log-panel::-webkit-scrollbar-thumb {
+  background: #98a48f;
+  border-radius: 999px;
+}
+
+.ledger-table {
+  background: #f6f8f2;
+  border: 1px solid #e1e8dd;
+  border-radius: 8px;
+  max-height: clamp(220px, 44vh, 340px);
+  min-height: 180px;
+  overflow-y: scroll;
+  padding: 10px 6px 10px 10px;
+  scrollbar-gutter: stable;
+}
+
 .ledger-row {
   align-items: center;
   border-bottom: 1px solid #e2e8de;
@@ -456,14 +517,25 @@ button:disabled {
 }
 
 .ledger-head {
+  background: #f6f8f2;
   font-weight: 800;
+  position: sticky;
+  top: 0;
   text-transform: uppercase;
+  z-index: 1;
 }
 
 .event-list {
+  background: #f6f8f2;
+  border: 1px solid #e1e8dd;
+  border-radius: 8px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  max-height: clamp(220px, 44vh, 340px);
+  min-height: 220px;
+  overflow-y: scroll;
+  padding: 10px 6px 10px 10px;
+  scrollbar-gutter: stable;
 }
 
 .event-list li {

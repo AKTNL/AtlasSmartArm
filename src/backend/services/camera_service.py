@@ -128,6 +128,14 @@ class CameraService:
                 "capture_dir": str(self._capture_dir),
             }
 
+    def stop_preview(self) -> dict[str, object]:
+        with self._lock:
+            self._preview_clients = 0
+            if self._session is not None:
+                self._session.release()
+                self._session = None
+            return self.status()
+
     def preview_stream(self) -> Iterator[bytes]:
         self._ensure_camera_available()
         self._acquire_preview_client()

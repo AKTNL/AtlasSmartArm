@@ -13,7 +13,7 @@ import {
   SquareX,
   Terminal,
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { api } from './api/client'
 import type { CameraCapture, SystemEvent, SystemStatus, TaskDetail, TaskState } from './api/types'
@@ -77,7 +77,10 @@ export default function App() {
   }, [])
 
   const rememberEvent = useCallback((event: SystemEvent) => {
-    setEvents((current) => [event, ...current].slice(0, 40))
+    setEvents((current) => {
+      const rest = current.filter((item) => item.event_id !== event.event_id)
+      return [event, ...rest].slice(0, 40)
+    })
   }, [])
 
   useEventStream(rememberEvent)
@@ -303,15 +306,24 @@ interface CapturePanelProps {
 
 function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture }: CapturePanelProps) {
   const [previewUrl, setPreviewUrl] = useState('')
+  const previewImageRef = useRef<HTMLImageElement | null>(null)
   const blockedByTask = Boolean(status?.active_task_id)
 
   useEffect(() => {
+    const stopPreview = () => {
+      if (previewImageRef.current) {
+        previewImageRef.current.src = 'about:blank'
+        previewImageRef.current.removeAttribute('src')
+      }
+      void api.stopCameraPreview().catch(() => undefined)
+    }
     if (blockedByTask) {
+      stopPreview()
       setPreviewUrl('')
       return undefined
     }
     setPreviewUrl(api.cameraPreviewUrl())
-    return () => setPreviewUrl('')
+    return stopPreview
   }, [blockedByTask])
 
   return (
@@ -334,7 +346,7 @@ function CapturePanel({ status, captures, label, busy, onLabelChange, onCapture 
           </div>
         ) : (
           <div className="preview-frame">
-            {previewUrl ? <img src={previewUrl} alt="机械臂摄像头实时预览" /> : null}
+            {previewUrl ? <img ref={previewImageRef} src={previewUrl} alt="机械臂摄像头实时预览" /> : null}
           </div>
         )}
         <div className="capture-controls">
@@ -492,8 +504,8 @@ function EventPanel({ events }: { events: SystemEvent[] }) {
         <Terminal aria-hidden="true" size={20} />
       </div>
       <ul className="event-list">
-        {events.slice(0, 18).map((event) => (
-          <li key={event.event_id}>
+        {events.slice(0, 18).map((event, index) => (
+          <li key={`${event.event_id}-${event.time}-${index}`}>
             <strong>{event.type}</strong>
             <span>{formatTime(event.time)}</span>
           </li>

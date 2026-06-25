@@ -63,6 +63,16 @@ paths:
               schema:
                 type: string
                 format: binary
+  /api/v1/camera/preview/stop:
+    post:
+      summary: Stop and release the active camera preview session
+      responses:
+        "200":
+          description: Camera preview session state after release
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
   /api/v1/camera/captures:
     post:
       summary: Capture and save one camera frame

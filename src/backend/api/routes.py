@@ -69,6 +69,11 @@ def camera_preview(request: Request):
     )
 
 
+@api_router.post("/camera/preview/stop")
+def camera_preview_stop(request: Request):
+    return ok(request, services_from(request).camera.stop_preview())
+
+
 @api_router.post("/camera/captures")
 def camera_capture(request: Request, payload: CameraCaptureRequest):
     return ok(request, services_from(request).camera.capture(payload.label))

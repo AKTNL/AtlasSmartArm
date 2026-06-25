@@ -80,6 +80,11 @@ export const api = {
     }),
   cameraStatus: () => requestJson<CameraStatus>('/api/v1/camera/status'),
   cameraPreviewUrl: () => makeApiUrl(`/api/v1/camera/preview.mjpg?t=${Date.now()}`),
+  stopCameraPreview: () =>
+    requestJson<CameraStatus>('/api/v1/camera/preview/stop', {
+      method: 'POST',
+      keepalive: true,
+    }),
   cameraCaptureImageUrl: (captureId: string) =>
     makeApiUrl(`/api/v1/camera/captures/${captureId}/image`),
   capturePhoto: (label: string) =>

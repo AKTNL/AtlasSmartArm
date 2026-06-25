@@ -459,6 +459,24 @@ def test_camera_preview_stream_releases_camera_when_stream_ends(tmp_path):
     assert status["preview_clients"] == 0
 
 
+def test_camera_preview_stop_releases_active_session(tmp_path):
+    camera_backend = FakeCameraBackend()
+    app = create_app(
+        Settings(program_mode="board", capture_dir=str(tmp_path)),
+        camera_backend=camera_backend,
+    )
+    camera_client = TestClient(app)
+    stream = app.state.services.camera.preview_stream()
+    next(stream)
+
+    stopped = unwrap_ok(camera_client.post("/api/v1/camera/preview/stop"))
+
+    assert stopped["preview_active"] is False
+    assert stopped["preview_clients"] == 0
+    assert camera_backend.session.released is True
+    stream.close()
+
+
 def test_board_mode_camera_capture_is_rejected_while_task_is_running(tmp_path):
     camera_backend = FakeCameraBackend()
     board_client = TestClient(
