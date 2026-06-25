@@ -39,6 +39,10 @@ class Settings:
         "ROBOT_ARM_ROOT",
         "/home/HwHiAiUser/E2ESamples/src/E2E-Sample/ros2_robot_arm",
     )
+    ascend_toolkit_set_env: str = os.getenv(
+        "ASCEND_TOOLKIT_SET_ENV",
+        "/usr/local/Ascend/ascend-toolkit/set_env.sh",
+    )
     atlas_mock: bool = _as_bool(os.getenv("ATLAS_MOCK"), True)
     vision_mock: bool = _as_bool(os.getenv("VISION_MOCK"), True)
     arm_mock: bool = _as_bool(os.getenv("ARM_MOCK"), True)

@@ -60,10 +60,12 @@ class SubprocessProgramRunner:
         self,
         *,
         robot_arm_root: str,
+        ascend_toolkit_set_env: str = "/usr/local/Ascend/ascend-toolkit/set_env.sh",
         popen=subprocess.Popen,
         start_log_reader: bool = True,
     ) -> None:
         self.robot_arm_root = robot_arm_root
+        self.ascend_toolkit_set_env = ascend_toolkit_set_env
         self._popen = popen
         self._start_log_reader = start_log_reader
 
@@ -77,7 +79,12 @@ class SubprocessProgramRunner:
         except KeyError as exc:
             raise ValueError(f"Unsupported board program: {program}") from exc
         root = shlex.quote(self.robot_arm_root)
-        command = f"cd {root} && . ./setenv.sh && exec {launch}"
+        ascend_env = shlex.quote(self.ascend_toolkit_set_env)
+        command = (
+            f"cd {root} && "
+            f"if [ -f {ascend_env} ]; then . {ascend_env}; fi && "
+            f". ./setenv.sh && exec {launch}"
+        )
         process = self._popen(
             ["bash", "-lc", command],
             cwd=self.robot_arm_root,

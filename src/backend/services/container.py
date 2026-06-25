@@ -37,7 +37,10 @@ def create_services(
 ) -> Services:
     event_bus = EventBus()
     if settings.program_mode == "board" and program_runner is None:
-        program_runner = SubprocessProgramRunner(robot_arm_root=settings.robot_arm_root)
+        program_runner = SubprocessProgramRunner(
+            robot_arm_root=settings.robot_arm_root,
+            ascend_toolkit_set_env=settings.ascend_toolkit_set_env,
+        )
     arm = ArmService(event_bus)
     calibration = CalibrationService(settings.camera_width, settings.camera_height)
     vision = VisionService(settings)
