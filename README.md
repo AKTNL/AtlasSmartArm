@@ -49,6 +49,7 @@ Board default ROS2 programs
 ├── docs/
 │   ├── DEVELOPMENT_GUIDE.md
 │   ├── MODEL_TRAINING.md
+│   ├── TRAINING_PARAMETERS.md
 │   ├── PRD.md
 │   └── api/openapi.yaml
 ├── frontend/
@@ -168,6 +169,21 @@ new msg is [('Book', (0.012, 0.321))]
 - `kitchen`：Fish_bone, Watermelon_rind, Apple_core, Egg_shell, Peach_pit
 - `other`：Cigarette_butts, Toilet_paper, Disposable_chopsticks
 - 未知标签：`unknown`
+
+## 模型训练与参数记录
+
+完整训练、导出和部署流程见 [docs/MODEL_TRAINING.md](docs/MODEL_TRAINING.md)，本次实际参数记录见 [docs/TRAINING_PARAMETERS.md](docs/TRAINING_PARAMETERS.md)。
+
+当前 16 类垃圾检测模型没有使用本项目自写训练脚本，而是在 GPU 云机上调用 YOLOv5 官方 `train.py` 做迁移训练。本项目负责准备图片、YOLO 标注、数据集 YAML、类别顺序、训练参数，以及后续 ONNX/Ascend OM 导出和开发板部署。
+
+本次训练参数摘要：
+
+- 模型：YOLOv5s，预训练权重 `yolov5s.pt`，输出 16 类。
+- 数据：192 张训练图片、48 张验证图片，类别顺序必须和 `coco_names.txt`、后端类别映射、开发板分拣程序一致。
+- 训练环境：Ubuntu 22.04、NVIDIA RTX 5090、Python 3.12、PyTorch 2.8.0 + CUDA 12.8。
+- 训练命令核心参数：`--img 640`、`--batch 16`、`--epochs 100`、`--cache`。
+- 导出链路：`best.pt` -> FP16 `best.onnx` -> `Ascend310B4` 的 `yolov5s_bs1.om`。
+- 验证提醒：当前每类验证样本较少，指标只能作为 smoke check，不能等价于真实场景稳定性。
 
 ## 接口边界
 
