@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.backend.app import create_app
+from src.backend.config import Settings
 
 
 client = TestClient(create_app())
@@ -42,6 +43,8 @@ def test_system_status_exposes_mock_hardware_boundaries():
     assert data["camera"]["height"] == 480
     assert data["arm"]["state"] == "idle"
     assert data["calibration"]["ready"] is True
+    assert data["program_mode"] == "mock"
+    assert data["active_task_id"] is None
 
 
 def test_vision_detection_returns_unit_explicit_coordinates():
@@ -110,6 +113,279 @@ def test_task_lifecycle_advances_and_can_be_queried():
         "succeeded",
     }
     assert 0 <= detail["progress"] <= 1
+
+
+class FakeProgramHandle:
+    def __init__(self, exit_code=None) -> None:
+        self.pid = 4242
+        self.exit_code = exit_code
+        self.interrupted = False
+
+    def poll(self):
+        return self.exit_code
+
+    def interrupt(self) -> None:
+        self.interrupted = True
+
+
+class FakeProgramRunner:
+    def __init__(self, exit_code=None) -> None:
+        self.started: list[str] = []
+        self.handle = FakeProgramHandle(exit_code=exit_code)
+
+    def start(self, program, on_output):
+        self.started.append(program)
+        on_output("default program started")
+        return self.handle
+
+
+class FailingProgramRunner:
+    def start(self, program, on_output):
+        raise RuntimeError("ros2 launch failed")
+
+
+def test_board_mode_pick_sort_starts_default_ros_program():
+    runner = FakeProgramRunner()
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=runner)
+    )
+
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    assert runner.started == ["pick_sort_default"]
+    assert detail["program"] == "pick_sort_default"
+    assert detail["pid"] == 4242
+    assert detail["started_at"].endswith("Z")
+    assert detail["ended_at"] is None
+    assert detail["exit_code"] is None
+    assert detail["logs"] == ["default program started"]
+
+
+def test_board_mode_stack_starts_default_ros_program():
+    runner = FakeProgramRunner()
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=runner)
+    )
+
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/stack",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["red_block"]},
+                "stack": {"slot_id": "stack_area_01", "max_layers": 3},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    assert runner.started == ["stack_default"]
+    assert detail["program"] == "stack_default"
+    assert detail["pid"] == 4242
+
+
+def test_board_mode_rejects_second_running_task():
+    runner = FakeProgramRunner()
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=runner)
+    )
+    unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    error = unwrap_error(
+        board_client.post(
+            "/api/v1/tasks/stack",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["red_block"]},
+                "stack": {"slot_id": "stack_area_01", "max_layers": 3},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        ),
+        409,
+        "ARM_BUSY",
+    )
+
+    assert error["details"]["active_task_id"] == "task_000000000001"
+
+
+def test_board_mode_maps_program_exit_to_task_result():
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=FakeProgramRunner(exit_code=0))
+    )
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    assert detail["state"] == "succeeded"
+    assert detail["exit_code"] == 0
+    assert detail["ended_at"].endswith("Z")
+    assert detail["result"] == {"message": "Default board program completed."}
+
+
+def test_board_mode_maps_program_failure_to_task_result():
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=FakeProgramRunner(exit_code=2))
+    )
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/stack",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["red_block"]},
+                "stack": {"slot_id": "stack_area_01", "max_layers": 3},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    detail = unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    assert detail["state"] == "failed"
+    assert detail["exit_code"] == 2
+    assert detail["result"] == {"message": "Default board program failed.", "exit_code": 2}
+
+
+def test_board_mode_cancel_interrupts_running_program_without_emergency_stop_claim():
+    runner = FakeProgramRunner()
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=runner)
+    )
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    detail = unwrap_ok(board_client.post(f"/api/v1/tasks/{created['task_id']}/cancel"))
+
+    assert runner.handle.interrupted is True
+    assert detail["state"] == "cancelled"
+    assert detail["result"] == {
+        "message": "Default board program interrupted; this is not an emergency stop."
+    }
+
+
+def test_board_mode_program_output_is_published_as_event():
+    runner = FakeProgramRunner()
+    app = create_app(Settings(program_mode="board"), program_runner=runner)
+    board_client = TestClient(app)
+
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    events = app.state.services.event_bus.latest(limit=10)
+    log_events = [event for event in events if event["type"] == "task.log.created"]
+
+    assert log_events[-1]["data"] == {
+        "task_id": created["task_id"],
+        "program": "pick_sort_default",
+        "line": "default program started",
+    }
+
+
+def test_board_mode_default_program_does_not_mutate_inventory():
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=FakeProgramRunner(exit_code=0))
+    )
+    before = unwrap_ok(board_client.get("/api/v1/inventory/items"))
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+    unwrap_ok(board_client.get(f"/api/v1/tasks/{created['task_id']}"))
+
+    after = unwrap_ok(board_client.get("/api/v1/inventory/items"))
+
+    assert after["items"] == before["items"]
+
+
+def test_board_mode_system_status_exposes_active_task_and_camera_policy():
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=FakeProgramRunner())
+    )
+    created = unwrap_ok(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        )
+    )
+
+    status = unwrap_ok(board_client.get("/api/v1/system/status"))
+
+    assert status["program_mode"] == "board"
+    assert status["active_task_id"] == created["task_id"]
+    assert status["camera_policy"] == "idle_only"
+
+
+def test_board_mode_failed_program_start_does_not_leave_active_task():
+    board_client = TestClient(
+        create_app(Settings(program_mode="board"), program_runner=FailingProgramRunner())
+    )
+
+    unwrap_error(
+        board_client.post(
+            "/api/v1/tasks/pick-sort",
+            json={
+                "target": {"mode": "auto_detect", "labels": ["insulator"]},
+                "destination": {"type": "category_bin", "category": "power_fitting"},
+                "options": {"dry_run": False, "max_retry": 1},
+            },
+        ),
+        500,
+        "INTERNAL",
+    )
+    status = unwrap_ok(board_client.get("/api/v1/system/status"))
+
+    assert status["active_task_id"] is None
 
 
 def test_inventory_crud_and_stock_movement():

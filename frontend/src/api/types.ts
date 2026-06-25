@@ -66,6 +66,9 @@ export interface SystemStatus {
     ready: boolean
     version: string
   }
+  program_mode: 'mock' | 'board'
+  active_task_id: string | null
+  camera_policy: 'idle_only' | 'unavailable'
 }
 
 export interface Detection {
@@ -107,6 +110,12 @@ export interface TaskDetail extends TaskCreateResult {
   created_at: string
   updated_at: string
   result: Record<string, unknown> | null
+  program: 'pick_sort_default' | 'stack_default' | null
+  pid: number | null
+  exit_code: number | null
+  logs: string[]
+  started_at: string | null
+  ended_at: string | null
 }
 
 export interface InventoryLocation {

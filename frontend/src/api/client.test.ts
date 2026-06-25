@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ApiError, makeApiUrl, unwrapResponse } from './client'
+import type { TaskDetail } from './types'
 
 describe('API client helpers', () => {
   it('builds API URLs from the configured base path', () => {
@@ -31,5 +32,33 @@ describe('API client helpers', () => {
         },
       }),
     ).toThrow(ApiError)
+  })
+
+  it('unwraps board task detail fields used by the demo workbench', () => {
+    const task = unwrapResponse<TaskDetail>({
+      request_id: 'req_task',
+      success: true,
+      data: {
+        task_id: 'task_000000000001',
+        type: 'pick_sort',
+        state: 'moving',
+        progress: 0.62,
+        current_step: 'moving_to_target',
+        created_at: '2026-06-25T00:00:00Z',
+        updated_at: '2026-06-25T00:00:01Z',
+        result: null,
+        program: 'pick_sort_default',
+        pid: 4242,
+        exit_code: null,
+        logs: ['default program started'],
+        started_at: '2026-06-25T00:00:00Z',
+        ended_at: null,
+      },
+      error: null,
+    })
+
+    expect(task.program).toBe('pick_sort_default')
+    expect(task.logs).toEqual(['default program started'])
+    expect(task.pid).toBe(4242)
   })
 })

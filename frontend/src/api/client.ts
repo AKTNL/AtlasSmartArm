@@ -82,7 +82,7 @@ export const api = {
       body: JSON.stringify({
         target: { mode: 'auto_detect', labels },
         destination: { type: 'category_bin', category },
-        options: { dry_run: true, max_retry: 1 },
+        options: { dry_run: false, max_retry: 1 },
       }),
     }),
   createStackTask: (labels: string[], slotId: string) =>
@@ -91,7 +91,7 @@ export const api = {
       body: JSON.stringify({
         target: { mode: 'auto_detect', labels },
         stack: { slot_id: slotId, max_layers: 3 },
-        options: { dry_run: true, max_retry: 1 },
+        options: { dry_run: false, max_retry: 1 },
       }),
     }),
   taskDetail: (taskId: string) => requestJson<TaskDetail>(`/api/v1/tasks/${taskId}`),

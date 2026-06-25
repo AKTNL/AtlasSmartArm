@@ -11,10 +11,14 @@ from src.backend.errors import (
     validation_error_handler,
 )
 from src.backend.response import new_request_id
+from src.backend.services.board_program_runner import ProgramRunner
 from src.backend.services.container import create_services
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    program_runner: ProgramRunner | None = None,
+) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(
         title="AtlasSmartArm API",
@@ -22,7 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
-    app.state.services = create_services(settings)
+    app.state.services = create_services(settings, program_runner)
 
     app.add_middleware(
         CORSMiddleware,

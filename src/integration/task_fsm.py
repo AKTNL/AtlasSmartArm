@@ -7,7 +7,7 @@ ALLOWED_TRANSITIONS: dict[TaskState, set[TaskState]] = {
     TaskState.queued: {TaskState.detecting, TaskState.cancelled, TaskState.failed},
     TaskState.detecting: {TaskState.planning, TaskState.cancelled, TaskState.failed},
     TaskState.planning: {TaskState.moving, TaskState.paused, TaskState.cancelled, TaskState.failed},
-    TaskState.moving: {TaskState.verifying, TaskState.paused, TaskState.failed},
+    TaskState.moving: {TaskState.verifying, TaskState.paused, TaskState.cancelled, TaskState.failed},
     TaskState.verifying: {TaskState.succeeded, TaskState.failed},
     TaskState.paused: {TaskState.planning, TaskState.cancelled, TaskState.failed},
     TaskState.succeeded: set(),

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from src.backend.config import Settings
 from src.backend.services.arm_service import ArmService
+from src.backend.services.board_program_runner import ProgramRunner, SubprocessProgramRunner
 from src.backend.services.calibration_service import CalibrationService
 from src.backend.services.event_bus import EventBus
 from src.backend.services.inventory_service import InventoryService
@@ -22,14 +23,19 @@ class Services:
     system: SystemService
 
 
-def create_services(settings: Settings) -> Services:
+def create_services(
+    settings: Settings,
+    program_runner: ProgramRunner | None = None,
+) -> Services:
     event_bus = EventBus()
+    if settings.program_mode == "board" and program_runner is None:
+        program_runner = SubprocessProgramRunner(robot_arm_root=settings.robot_arm_root)
     arm = ArmService(event_bus)
     calibration = CalibrationService(settings.camera_width, settings.camera_height)
     vision = VisionService(settings)
     inventory = InventoryService(event_bus)
-    tasks = TaskService(event_bus)
-    system = SystemService(settings, arm, calibration)
+    tasks = TaskService(event_bus, settings, program_runner)
+    system = SystemService(settings, arm, calibration, tasks)
     return Services(
         settings=settings,
         event_bus=event_bus,

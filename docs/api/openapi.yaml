@@ -503,6 +503,99 @@ components:
           type: integer
           minimum: 0
           maximum: 5
+    TaskState:
+      type: string
+      enum: [queued, detecting, planning, moving, verifying, succeeded, failed, cancelled, paused]
+    BoardProgram:
+      type:
+        - string
+        - "null"
+      enum: [pick_sort_default, stack_default, null]
+    TaskDetail:
+      type: object
+      required:
+        - task_id
+        - type
+        - state
+        - progress
+        - current_step
+        - created_at
+        - updated_at
+        - result
+        - program
+        - pid
+        - exit_code
+        - logs
+        - started_at
+        - ended_at
+      properties:
+        task_id:
+          type: string
+        type:
+          type: string
+          enum: [pick_sort, stack]
+        state:
+          $ref: "#/components/schemas/TaskState"
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1
+        current_step:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        result:
+          type:
+            - object
+            - "null"
+        program:
+          $ref: "#/components/schemas/BoardProgram"
+        pid:
+          type:
+            - integer
+            - "null"
+        exit_code:
+          type:
+            - integer
+            - "null"
+        logs:
+          type: array
+          items:
+            type: string
+        started_at:
+          type:
+            - string
+            - "null"
+        ended_at:
+          type:
+            - string
+            - "null"
+    SystemStatus:
+      type: object
+      required: [atlas, camera, arm, vision, calibration, program_mode, active_task_id, camera_policy]
+      properties:
+        atlas:
+          type: object
+        camera:
+          type: object
+        arm:
+          type: object
+        vision:
+          type: object
+        calibration:
+          type: object
+        program_mode:
+          type: string
+          enum: [mock, board]
+        active_task_id:
+          type:
+            - string
+            - "null"
+        camera_policy:
+          type: string
+          enum: [idle_only, unavailable]
     InventoryLocation:
       type: object
       required: [area, shelf, slot]

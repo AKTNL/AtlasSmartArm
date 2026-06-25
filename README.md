@@ -94,6 +94,35 @@ npm run dev
 VITE_API_BASE_URL=http://localhost:8080 npm run dev
 ```
 
+### 真机默认程序 Demo
+
+本分支支持“本地前端 + 开发板后端 + 开发板默认 ROS2 程序”的真机 demo。
+
+开发板后端在 `192.168.137.100` 上运行：
+
+```bash
+./scripts/run_board_backend.sh
+```
+
+本地前端默认连接开发板后端：
+
+```bash
+./scripts/run_frontend_board.sh
+```
+
+真机模式使用开发板已有 ROS2 默认程序：
+
+```bash
+ros2 launch robot_arm_bringup block_cls_bringup.launch.py
+ros2 launch robot_arm_bringup color_stacking_bringup.launch.py
+```
+
+注意事项：
+
+* 任务运行时不另开实时视频流，避免抢占默认程序内部打开的 `/dev/video0`。
+* 管理面板只记录任务运行和日志，不自动写入“某物品已放入某位置”的伪结果。
+* 仓库和脚本不保存 SSH 密码；需要登录开发板时请在本机 SSH 环境中处理凭据。
+
 ### 验证命令
 
 ```bash

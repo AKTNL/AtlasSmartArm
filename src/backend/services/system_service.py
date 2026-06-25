@@ -1,6 +1,7 @@
 from src.backend.config import Settings
 from src.backend.services.arm_service import ArmService
 from src.backend.services.calibration_service import CalibrationService
+from src.backend.services.task_service import TaskService
 
 
 class SystemService:
@@ -9,10 +10,12 @@ class SystemService:
         settings: Settings,
         arm_service: ArmService,
         calibration_service: CalibrationService,
+        task_service: TaskService,
     ) -> None:
         self.settings = settings
         self.arm_service = arm_service
         self.calibration_service = calibration_service
+        self.task_service = task_service
 
     def status(self) -> dict[str, object]:
         return {
@@ -45,4 +48,7 @@ class SystemService:
                 "ready": self.calibration_service.ready,
                 "version": self.calibration_service.version,
             },
+            "program_mode": self.settings.program_mode,
+            "active_task_id": self.task_service.active_task_id(),
+            "camera_policy": "idle_only" if self.settings.program_mode == "board" else "unavailable",
         }

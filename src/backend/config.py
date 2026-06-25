@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 import os
+from typing import Literal
 
 
 def _as_bool(value: str | None, default: bool) -> bool:
     if value is None:
         return default
     return value.lower() in {"1", "true", "yes", "on"}
+
+
+def _program_mode(value: str | None) -> Literal["mock", "board"]:
+    return "board" if value == "board" else "mock"
 
 
 @dataclass(frozen=True)
@@ -27,6 +32,11 @@ class Settings:
     )
     calibration_dir: str = os.getenv(
         "CALIBRATION_DIR", "/opt/atlas-smart-arm/calibration"
+    )
+    program_mode: Literal["mock", "board"] = _program_mode(os.getenv("PROGRAM_MODE"))
+    robot_arm_root: str = os.getenv(
+        "ROBOT_ARM_ROOT",
+        "/home/HwHiAiUser/E2ESamples/src/E2E-Sample/ros2_robot_arm",
     )
     atlas_mock: bool = _as_bool(os.getenv("ATLAS_MOCK"), True)
     vision_mock: bool = _as_bool(os.getenv("VISION_MOCK"), True)

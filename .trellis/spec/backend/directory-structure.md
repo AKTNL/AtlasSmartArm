@@ -40,6 +40,9 @@ src/
   string enums in `src/backend/models/enums.py`.
 - Put behavior and state in `src/backend/services/`; routes should only parse
   inputs, call a service, and wrap the result.
+- Put board default-program process control behind a service adapter seam under
+  `src/backend/services/`. Routes and frontend code must not know ROS2 launch
+  commands, process groups, or camera ownership rules.
 - Put hardware-specific code in `src/hardware/`, vision-specific code in
   `src/vision/`, and closed-loop orchestration in `src/integration/`.
 
@@ -57,5 +60,7 @@ where safety depends on units, such as `duration_ms`, `joint1_deg`, `x_m`, and
 
 - `src/backend/services/arm_service.py` validates safety ranges before mock or
   real motion.
+- `src/backend/services/board_program_runner.py` owns the board default ROS2
+  process launch commands and interrupt behavior.
 - `src/integration/coordinate_transform.py` centralizes pixel-to-arm unit
   conversion.
