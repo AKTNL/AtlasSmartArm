@@ -1,4 +1,10 @@
-from enum import StrEnum
+try:
+    from enum import StrEnum
+except ImportError:  # Python 3.10 on the development board does not include StrEnum.
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        pass
 
 
 class MaterialCategory(StrEnum):
